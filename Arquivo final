@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTracker - Meu Treino</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar para visualização limpa */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col pb-24 max-w-md mx-auto relative border-x border-slate-800/50 shadow-2xl">
+
+    <!-- Header / Top Bar -->
+    <header class="p-4 pt-6 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 border-b border-slate-800 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent flex items-center gap-2">
+                <i data-lucide="dumbbell" class="text-emerald-400 w-6 h-6"></i> FitTracker
+            </h1>
+            <p class="text-xs text-slate-400">Seu treino simples e eficiente</p>
+        </div>
+        <button id="reset-day-btn" title="Resetar Concluídos" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all active:scale-95 border border-slate-700">
+            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <main class="p-4 flex-1 flex flex-col gap-5">
+        
+        <!-- Seleção de Treino (Abas) -->
+        <section>
+            <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">Selecione o Treino</label>
+            <div class="grid grid-cols-3 gap-2" id="workout-tabs">
+                <!-- Tabs serão preenchidas por JS -->
+            </div>
+        </section>
+
+        <!-- Descrição do Treino Ativo -->
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between">
+            <div>
+                <h2 id="current-workout-title" class="font-semibold text-slate-200 text-base">Treino A</h2>
+                <p id="current-workout-subtitle" class="text-xs text-emerald-400">Peito & Tríceps</p>
+            </div>
+            <span id="progress-text" class="text-xs font-bold bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                0/0 (0%)
+            </span>
+        </div>
+
+        <!-- Barra de Progresso -->
+        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="progress-bar" class="bg-emerald-500 h-full transition-all duration-300 w-0"></div>
+        </div>
+
+        <!-- Lista de Exercícios -->
+        <section class="flex-1">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Exercícios</h3>
+                <button id="open-add-modal-btn" class="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 bg-emerald-950/50 px-2.5 py-1.5 rounded-lg border border-emerald-800/50 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
+                </button>
+            </div>
+
+            <div id="exercise-list" class="space-y-2.5">
+                <!-- Exercícios carregados dinamicamente -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Timer (Cronômetro de Descanso Fixo na Parte Inferior) -->
+    <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto p-4 bg-slate-900/95 border-t border-slate-800 backdrop-blur-lg z-20">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <i data-lucide="timer" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 block font-medium">Descanso</span>
+                    <span id="timer-display" class="text-2xl font-bold tracking-wider text-slate-100 font-mono">00:30</span>
+                </div>
+            </div>
+
+            <!-- Botões de Controle do Cronômetro -->
+            <div class="flex items-center gap-2">
+                <button id="timer-toggle-btn" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2 px-4 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5 text-sm">
+                    <i data-lucide="play" id="timer-btn-icon" class="w-4 h-4 fill-slate-950"></i>
+                    <span id="timer-btn-text">Iniciar</span>
+                </button>
+                
+                <!-- Seleção rápida de tempo -->
+                <div class="flex gap-1">
+                    <button class="set-timer-preset px-2 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-medium active:scale-95" data-seconds="30">30s</button>
+                    <button class="set-timer-preset px-2 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-medium active:scale-95" data-seconds="60">60s</button>
+                    <button class="set-timer-preset px-2 py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 font-medium active:scale-95" data-seconds="90">90s</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Adicionar Novo Exercício -->
+    <div id="add-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl animate-in fade-in slide-in-from-bottom duration-200">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-slate-100">Novo Exercício</h3>
+                <button id="close-add-modal-btn" class="text-slate-400 hover:text-slate-200 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="add-exercise-form" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome do Exercício</label>
+                    <input type="text" id="exercise-name" required placeholder="Ex: Supino Reto" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Séries</label>
+                        <input type="number" id="exercise-sets" required min="1" max="20" value="4" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Repetições</label>
+                        <input type="text" id="exercise-reps" required placeholder="Ex: 10-12" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" id="cancel-add-modal-btn" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-sm transition-all">Cancelar</button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-sm transition-all">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script de Lógica do App -->
+    <script>
+        // Dados Padrão do App
+        const defaultWorkouts = {
+            A: {
+                title: "Treino A",
+                subtitle: "Peito & Tríceps",
+                exercises: [
+                    { id: 1, name: "Supino Reto com Barra", sets: 4, reps: "10-12", completed: false },
+                    { id: 2, name: "Supino Inclinado com Halteres", sets: 3, reps: "12", completed: false },
+                    { id: 3, name: "Crossover (Cabo)", sets: 3, reps: "15", completed: false },
+                    { id: 4, name: "Tríceps Pulley", sets: 4, reps: "12", completed: false },
+                    { id: 5, name: "Tríceps Testa", sets: 3, reps: "10", completed: false }
+                ]
+            },
+            B: {
+                title: "Treino B",
+                subtitle: "Costas & Bíceps",
+                exercises: [
+                    { id: 101, name: "Puxada Frontal", sets: 4, reps: "10-12", completed: false },
+                    { id: 102, name: "Remada Curvada", sets: 4, reps: "10", completed: false },
+                    { id: 103, name: "Remada Baixa Triângulo", sets: 3, reps: "12", completed: false },
+                    { id: 104, name: "Rosca Direta com Barra", sets: 4, reps: "10", completed: false },
+                    { id: 105, name: "Rosca Martelo com Halteres", sets: 3, reps: "12", completed: false }
+                ]
+            },
+            C: {
+                title: "Treino C",
+                subtitle: "Pernas & Ombros",
+                exercises: [
+                    { id: 201, name: "Agachamento Livre", sets: 4, reps: "8-10", completed: false },
+                    { id: 202, name: "Leg Press 45°", sets: 4, reps: "12", completed: false },
+                    { id: 203, name: "Cadeira Extensora", sets: 3, reps: "15", completed: false },
+                    { id: 204, name: "Desenvolvimento com Halteres", sets: 4, reps: "10", completed: false },
+                    { id: 205, name: "Elevação Lateral", sets: 4, reps: "12-15", completed: false }
+                ]
+            }
+        };
+
+        // Estado Global da Aplicação
+        let workouts = JSON.parse(localStorage.getItem('fitTrackerWorkouts')) || defaultWorkouts;
+        let activeWorkoutKey = localStorage.getItem('fitTrackerActiveWorkout') || 'A';
+
+        // Estado do Cronômetro
+        let timerInterval = null;
+        let timerSecondsLeft = 30;
+        let timerPreset = 30;
+        let isTimerRunning = false;
+
+        // Referências do DOM
+        const workoutTabsContainer = document.getElementById('workout-tabs');
+        const currentWorkoutTitle = document.getElementById('current-workout-title');
+        const currentWorkoutSubtitle = document.getElementById('current-workout-subtitle');
+        const exerciseListContainer = document.getElementById('exercise-list');
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        const resetDayBtn = document.getElementById('reset-day-btn');
+
+        // Modal
+        const addModal = document.getElementById('add-modal');
+        const openAddModalBtn = document.getElementById('open-add-modal-btn');
+        const closeAddModalBtn = document.getElementById('close-add-modal-btn');
+        const cancelAddModalBtn = document.getElementById('cancel-add-modal-btn');
+        const addExerciseForm = document.getElementById('add-exercise-form');
+
+        // Timer DOM
+        const timerDisplay = document.getElementById('timer-display');
+        const timerToggleBtn = document.getElementById('timer-toggle-btn');
+        const timerBtnIcon = document.getElementById('timer-btn-icon');
+        const timerBtnText = document.getElementById('timer-btn-text');
+        const presetButtons = document.querySelectorAll('.set-timer-preset');
+
+        // Salvamento no LocalStorage
+        function saveData() {
+            localStorage.setItem('fitTrackerWorkouts', JSON.stringify(workouts));
+            localStorage.setItem('fitTrackerActiveWorkout', activeWorkoutKey);
+        }
+
+        // Renderizar Abas dos Treinos
+        function renderTabs() {
+            workoutTabsContainer.innerHTML = '';
+            Object.keys(workouts).forEach(key => {
+                const isActive = key === activeWorkoutKey;
+                const tabBtn = document.createElement('button');
+                tabBtn.className = `py-2.5 px-3 rounded-xl text-center text-xs font-bold transition-all border ${
+                    isActive 
+                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20 scale-[1.02]' 
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
+                }`;
+                tabBtn.innerText = workouts[key].title;
+                tabBtn.addEventListener('click', () => {
+                    activeWorkoutKey = key;
+                    saveData();
+                    renderTabs();
+                    renderWorkout();
+                });
+                workoutTabsContainer.appendChild(tabBtn);
+            });
+        }
+
+        // Renderizar Detalhes do Treino e Lista de Exercícios
+        function renderWorkout() {
+            const workout = workouts[activeWorkoutKey];
+            currentWorkoutTitle.innerText = workout.title;
+            currentWorkoutSubtitle.innerText = workout.subtitle;
+
+            // Limpar lista
+            exerciseListContainer.innerHTML = '';
+
+            if (workout.exercises.length === 0) {
+                exerciseListContainer.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                        <i data-lucide="dumbbell" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                        <p class="text-xs">Nenhum exercício cadastrado neste treino.</p>
+                    </div>
+                `;
+                updateProgress(0, 0);
+                lucide.createIcons();
+                return;
+            }
+
+            let completedCount = 0;
+
+            workout.exercises.forEach((ex) => {
+                if (ex.completed) completedCount++;
+
+                const item = document.createElement('div');
+                item.className = `p-3.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                    ex.completed 
+                    ? 'bg-slate-900/40 border-slate-800/60 opacity-60' 
+                    : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                }`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button onclick="toggleExercise(${ex.id})" class="w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                            ex.completed 
+                            ? 'bg-emerald-500 border-emerald-400 text-slate-950' 
+                            : 'border-slate-600 hover:border-emerald-500 text-transparent'
+                        }">
+                            <i data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+                        </button>
+                        <div class="truncate">
+                            <h4 class="text-sm font-semibold ${ex.completed ? 'line-through text-slate-400' : 'text-slate-100'} truncate">${ex.name}</h4>
+                            <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                                <span><strong class="text-emerald-400 font-medium">${ex.sets}</strong> séries</span>
+                                <span class="text-slate-600">•</span>
+                                <span><strong class="text-slate-300 font-medium">${ex.reps}</strong> reps</span>
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="deleteExercise(${ex.id})" class="text-slate-600 hover:text-rose-400 p-1.5 transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+
+                exerciseListContainer.appendChild(item);
+            });
+
+            updateProgress(completedCount, workout.exercises.length);
+            lucide.createIcons();
+        }
+
+        // Atualizar barra de progresso
+        function updateProgress(completed, total) {
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            progressText.innerText = `${completed}/${total} (${percentage}%)`;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        // Alternar Estado de Conclusão do Exercício
+        window.toggleExercise = function(id) {
+            const workout = workouts[activeWorkoutKey];
+            const exercise = workout.exercises.find(e => e.id === id);
+            if (exercise) {
+                exercise.completed = !exercise.completed;
+                saveData();
+                renderWorkout();
+
+                // Se acabou de marcar como feito, reseta/inicia automaticamente o timer de descanso se desejado
+                if (exercise.completed) {
+                    resetTimer();
+                }
+            }
+        };
+
+        // Excluir Exercício
+        window.deleteExercise = function(id) {
+            workouts[activeWorkoutKey].exercises = workouts[activeWorkoutKey].exercises.filter(e => e.id !== id);
+            saveData();
+            renderWorkout();
+        };
+
+        // Resetar Conclusões do Dia
+        resetDayBtn.addEventListener('click', () => {
+            workouts[activeWorkoutKey].exercises.forEach(e => e.completed = false);
+            saveData();
+            renderWorkout();
+        });
+
+        // Modais
+        openAddModalBtn.addEventListener('click', () => addModal.classList.remove('hidden'));
+        closeAddModalBtn.addEventListener('click', () => addModal.classList.add('hidden'));
+        cancelAddModalBtn.addEventListener('click', () => addModal.classList.add('hidden'));
+
+        // Adicionar Novo Exercício
+        addExerciseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('exercise-name').value.trim();
+            const sets = parseInt(document.getElementById('exercise-sets').value);
+            const reps = document.getElementById('exercise-reps').value.trim();
+
+            if (name && sets && reps) {
+                const newExercise = {
+                    id: Date.now(),
+                    name,
+                    sets,
+                    reps,
+                    completed: false
+                };
+
+                workouts[activeWorkoutKey].exercises.push(newExercise);
+                saveData();
+                renderWorkout();
+
+                // Resetar e fechar form
+                addExerciseForm.reset();
+                document.getElementById('exercise-sets').value = '4';
+                addModal.classList.add('hidden');
+            }
+        });
+
+        // LÓGICA DO CRONÔMETRO
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimerUI() {
+            timerDisplay.innerText = formatTime(timerSecondsLeft);
+            if (isTimerRunning) {
+                timerBtnText.innerText = "Pausar";
+                timerBtnIcon.setAttribute('data-lucide', 'pause');
+            } else {
+                timerBtnText.innerText = "Iniciar";
+                timerBtnIcon.setAttribute('data-lucide', 'play');
+            }
+            lucide.createIcons();
+        }
+
+        function startTimer() {
+            if (isTimerRunning) return;
+            isTimerRunning = true;
+            updateTimerUI();
+
+            timerInterval = setInterval(() => {
+                if (timerSecondsLeft > 0) {
+                    timerSecondsLeft--;
+                    updateTimerUI();
+                } else {
+                    pauseTimer();
+                    // Alerta sonoro / vibração se suportado
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    alert("Tempo de descanso finalizado!");
+                    resetTimer();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isTimerRunning = false;
+            clearInterval(timerInterval);
+            updateTimerUI();
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timerSecondsLeft = timerPreset;
+            updateTimerUI();
+        }
+
+        timerToggleBtn.addEventListener('click', () => {
+            if (isTimerRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        });
+
+        // Botões de Preset de Tempo
+        presetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const secs = parseInt(btn.getAttribute('data-seconds'));
+                timerPreset = secs;
+                timerSecondsLeft = secs;
+                
+                // Highlight botão ativo
+                presetButtons.forEach(b => b.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/40'));
+                btn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/40');
+
+                resetTimer();
+            });
+        });
+
+        // Inicialização
+        window.onload = () => {
+            renderTabs();
+            renderWorkout();
+            updateTimerUI();
+        };
+    </script>
+</body>
+</html>
